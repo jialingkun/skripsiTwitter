@@ -13,7 +13,7 @@ search <- function(searchterm)
 {
   #access tweets and create cumulative file
   
-  list <- searchTwitter(searchterm, n=100)
+  list <- searchTwitter(searchterm, n=50, lang="id")
   if(length(list)>0){
     df <- twListToDF(list)
     df <- df[, order(names(df))]
@@ -25,6 +25,7 @@ search <- function(searchterm)
     stack <- rbind(stack, df)
     stack <- subset(stack, !duplicated(stack$text))
     write.csv(stack, file=paste('cumtw.csv'), row.names=F)
+    return(stack)
   }
 }
 # Define server logic required to draw a histogram
@@ -40,12 +41,5 @@ shinyServer(function(input, output) {
   output$text1 <- renderText({ 
     paste("You have selected", input$var)
   })
-  output$distPlot <- renderPlot({
-    search(input$var)
-    x    <- faithful[, 2]  # Old Faithful Geyser data
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'skyblue', border = 'white')
-  })
+  output$table <- renderTable(search(input$var))
 })

@@ -23,7 +23,7 @@ shinyUI(fluidPage(
                   choices = c("machung", "#machung",
                               "@machung", "Percent Asian"),
                   selected = "machung"),
-      plotOutput("distPlot"),
+      tableOutput('table'),
       textOutput("text1")
     )
   )

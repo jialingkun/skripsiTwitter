@@ -158,9 +158,9 @@ shinyServer(function(input, output) {
     tweetsTest.corpus <- Corpus(VectorSource(as.vector(tweetsTest.text)))
     
     # Create term document matrix
-    tweetsTrain.positive.matrix <- t(TermDocumentMatrix(tweetsTrain.positive.corpus,control = list(wordLengths=c(4,Inf))));
-    tweetsTrain.negative.matrix <- t(TermDocumentMatrix(tweetsTrain.negative.corpus,control = list(wordLengths=c(4,Inf))));
-    tweetsTest.matrix <- t(TermDocumentMatrix(tweetsTest.corpus,control = list(wordLengths=c(4,Inf))));
+    tweetsTrain.positive.matrix <- t(TermDocumentMatrix(tweetsTrain.positive.corpus,control = list(wordLengths=c(3,Inf))));
+    tweetsTrain.negative.matrix <- t(TermDocumentMatrix(tweetsTrain.negative.corpus,control = list(wordLengths=c(3,Inf))));
+    tweetsTest.matrix <- t(TermDocumentMatrix(tweetsTest.corpus,control = list(wordLengths=c(3,Inf))));
     
     tweetsTrain.positive.pMatrix<-probabilityMatrix(tweetsTrain.positive.matrix)
     tweetsTrain.negative.pMatrix<-probabilityMatrix(tweetsTrain.negative.matrix)

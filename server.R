@@ -38,6 +38,8 @@ search <- function(searchterm, count)
     stack <- read.csv(file=paste(filename))
     stack <- rbind(stack, tweetToCsv)
     stack <- subset(stack, !duplicated(stack$text))
+    #order by date
+    stack <- stack[rev(order(as.Date(stack$created, format="%d/%m/%Y"))),]
     write.csv(stack, file=paste(filename), row.names=F)
     return(stack)
   }
@@ -129,13 +131,11 @@ shinyServer(function(input, output) {
   #     when inputs change
   #  2) Its output type is a plot
   
-  rawTweet <- reactive({search(input$topic,input$count)})
+  retrieveRawTweet <- reactive({
+    search(input$topic,input$count)
+    })
   
-  output$text1 <- renderText({ 
-    paste("You have selected", input$topic)
-  })
-  
-  output$table <- renderTable({
+  classification <- reactive({
     searchterm = input$topic
     filenameNegative = c(searchterm,"TrainNegative.csv")
     filenameNegative = str_c(filenameNegative,collapse='')
@@ -146,7 +146,7 @@ shinyServer(function(input, output) {
     tweetsTrain.positive$Tweet<- clean_text(tweetsTrain.positive$Tweet)
     tweetsTrain.negative<-read.csv(filenameNegative,header=T)
     tweetsTrain.negative$Tweet<- clean_text(tweetsTrain.negative$Tweet)
-    tweetsTestRaw<-rawTweet()
+    tweetsTestRaw<-retrieveRawTweet()
     tweetsTest.text<-clean_text(tweetsTestRaw$text)
     
     tweetsTrain.positive["class"]<-rep("positif",nrow(tweetsTrain.positive))
@@ -182,6 +182,23 @@ shinyServer(function(input, output) {
       classified<-c(classified,ifelse(positiveProbability>negativeProbability,"positive","negative"))
     }
     
-    cbind(tweetsTestRaw,classified)
-    })
+    resultRaw <- cbind(tweetsTestRaw,classified)
+    resultClean <-cbind(text=tweetsTest,classified)
+    resultnegative <- resultClean[resultClean[, "classified"] == 'negative',"text"]
+    resultpositive <- resultClean[resultClean[, "classified"] == 'positive',"text"]
+    
+    result <- list(raw=resultRaw,negative=resultnegative,positive=resultpositive)
+    result
+  })
+  
+  #ComponentAnalysis <- reactive({})
+  
+  output$ClassificationTable <- renderTable({
+    classification()$raw
+  })
+  
+  output$PositiveF1Table <- renderTable({
+    NULL
+  })
+  
 })

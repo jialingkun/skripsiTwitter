@@ -23,9 +23,24 @@ shinyUI(fluidPage(
 
     # Show a plot of the generated distribution
     mainPanel(
-      
-      tableOutput('table'),
-      textOutput("text1")
+      tabsetPanel(
+        tabPanel(
+          "Klasifikasi", 
+          tableOutput('ClassificationTable')
+          ), 
+        tabPanel(
+          "Faktor Positif",
+          "Faktor 1",
+          tableOutput('PositiveF1Table'),
+          "Faktor 2"
+          ), 
+        tabPanel(
+          "Faktor Negatif", 
+          "Faktor 1",
+          #tableOutput('NegativeF1Table'),
+          "Faktor 2"
+          )
+      )
     )
   )
 ))

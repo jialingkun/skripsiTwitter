@@ -11,14 +11,13 @@ shinyUI(fluidPage(
     sidebarPanel(
       selectInput("topic", 
                   label = "Choose a topic",
-                  choices = c("machung", "ubaya",
-                              "stiki", "UMM"),
+                  choices = c("machung", "gunadarma"),
                   selected = "machung"),
       sliderInput("count",
                   "Number of tweet retrieved:",
                   min = 10,
-                  max = 100,
-                  value = 30)
+                  max = 500,
+                  value = 50)
     ),
 
     # Show a plot of the generated distribution

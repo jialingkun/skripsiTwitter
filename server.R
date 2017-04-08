@@ -7,6 +7,7 @@ library(tm)
 library(katadasaR)
 library(stringr)
 
+
 consumerKey <- 'TOB0CV5G8er5yVpucjYLK6Vvn'
 consumerSecret <- 'ZstnN6E3cv5Uwysps3fFGlTxAorFWbWIliZTreUbBFgoQRilWd'
 accessSecret <- 'WBMZ0OFzCWtrwma0imN3EppFWwrqFoGgekTiIj2qgMPHU'
@@ -82,15 +83,16 @@ clean_text = function(x)
   #tokenizing
   token = str_split(x, '\\s+')
   
-  #stemming
-  cleanText = NULL
-  for(vToken in token) {
-    stem = sapply(vToken, katadasaR)
-    vecstem = as.vector(stem)
-    test = str_c(vecstem,collapse=' ') #untokenize
-    cleanText = c(cleanText,test)
+  
+  size = as.numeric(length(x))
+  
+  for(i in 1:size){
+    token[[i]] = sapply(token[[i]], katadasaR)
+    token[[i]] = str_c(token[[i]],collapse=' ') #untokenize
+    
   }
-  return(cleanText)
+  
+  return(token)
 }
 
 probabilityMatrix <-function(docMatrix)
@@ -132,63 +134,72 @@ shinyServer(function(input, output) {
   #  2) Its output type is a plot
   
   retrieveRawTweet <- reactive({
-    search(input$topic,input$count)
-    })
+      search(input$topic,input$count)
+  })
   
   classification <- reactive({
-    searchterm = input$topic
-    filenameNegative = c(searchterm,"TrainNegative.csv")
-    filenameNegative = str_c(filenameNegative,collapse='')
-    filenamePositive = c(searchterm,"TrainPositive.csv")
-    filenamePositive = str_c(filenamePositive,collapse='')
-    # Collect data
-    tweetsTrain.positive<-read.csv(filenamePositive,header=T)
-    tweetsTrain.positive$Tweet<- clean_text(tweetsTrain.positive$Tweet)
-    tweetsTrain.negative<-read.csv(filenameNegative,header=T)
-    tweetsTrain.negative$Tweet<- clean_text(tweetsTrain.negative$Tweet)
-    tweetsTestRaw<-retrieveRawTweet()
-    tweetsTest.text<-clean_text(tweetsTestRaw$text)
-    
-    tweetsTrain.positive["class"]<-rep("positif",nrow(tweetsTrain.positive))
-    tweetsTrain.negative["class"]<-rep("negatif",nrow(tweetsTrain.negative))
-    
-    # Create corpus
-    tweetsTrain.positive.corpus <- Corpus(VectorSource(as.vector(tweetsTrain.positive$Tweet)))
-    tweetsTrain.negative.corpus <- Corpus(VectorSource(as.vector(tweetsTrain.negative$Tweet)))
-    tweetsTest.corpus <- Corpus(VectorSource(as.vector(tweetsTest.text)))
-    
-    # Create term document matrix
-    tweetsTrain.positive.matrix <- t(TermDocumentMatrix(tweetsTrain.positive.corpus,control = list(wordLengths=c(3,Inf))));
-    tweetsTrain.negative.matrix <- t(TermDocumentMatrix(tweetsTrain.negative.corpus,control = list(wordLengths=c(3,Inf))));
-    tweetsTest.matrix <- t(TermDocumentMatrix(tweetsTest.corpus,control = list(wordLengths=c(3,Inf))));
-    
-    tweetsTrain.positive.pMatrix<-probabilityMatrix(tweetsTrain.positive.matrix)
-    tweetsTrain.negative.pMatrix<-probabilityMatrix(tweetsTrain.negative.matrix)
-    
-    # Get the matrix
-    tweetsTest.matrix<-as.matrix(tweetsTest.matrix)
-    
-    # A holder for classification 
-    classified<-NULL
-    
-    for(documentNumber in 1:nrow(tweetsTest.matrix))
-    {
-      # Extract the test words
-      tweetsTest.chars<-names(tweetsTest.matrix[documentNumber,tweetsTest.matrix[documentNumber,] >= 1])
-      # Get the probabilities
-      positiveProbability <- getProbability(tweetsTest.chars,tweetsTrain.positive.pMatrix)
-      negativeProbability <- getProbability(tweetsTest.chars,tweetsTrain.negative.pMatrix)
-      # Add it to the classification list
-      classified<-c(classified,ifelse(positiveProbability>negativeProbability,"positive","negative"))
-    }
-    
-    resultRaw <- cbind(tweetsTestRaw,classified)
-    resultClean <-cbind(text=tweetsTest,classified)
-    resultnegative <- resultClean[resultClean[, "classified"] == 'negative',"text"]
-    resultpositive <- resultClean[resultClean[, "classified"] == 'positive',"text"]
-    
-    result <- list(raw=resultRaw,negative=resultnegative,positive=resultpositive)
-    result
+    withProgress(message = 'Classification :', value = 0, {
+      searchterm = input$topic
+      filenameNegative = c(searchterm,"TrainNegative.csv")
+      filenameNegative = str_c(filenameNegative,collapse='')
+      filenamePositive = c(searchterm,"TrainPositive.csv")
+      filenamePositive = str_c(filenamePositive,collapse='')
+      
+      # Collect data
+      tweetsTrain.positive<-read.csv(filenamePositive,header=T)
+      setProgress(0.1, detail = "Cleaning data train")
+      tweetsTrain.positive$Tweet<- clean_text(tweetsTrain.positive$Tweet)
+      tweetsTrain.negative<-read.csv(filenameNegative,header=T)
+      setProgress(0.35)
+      tweetsTrain.negative$Tweet<- clean_text(tweetsTrain.negative$Tweet)
+      setProgress(0.55, detail = "Retrieve Tweets")
+      tweetsTestRaw<-retrieveRawTweet()
+      setProgress(0.65, detail = "Cleaning data test")
+      tweetsTest<-clean_text(tweetsTestRaw$text)
+
+      
+      setProgress(0.95, detail = "Computing")
+      tweetsTrain.positive["class"]<-rep("positif",nrow(tweetsTrain.positive))
+      tweetsTrain.negative["class"]<-rep("negatif",nrow(tweetsTrain.negative))
+      
+      # Create corpus
+      tweetsTrain.positive.corpus <- Corpus(VectorSource(as.vector(tweetsTrain.positive$Tweet)))
+      tweetsTrain.negative.corpus <- Corpus(VectorSource(as.vector(tweetsTrain.negative$Tweet)))
+      tweetsTest.corpus <- Corpus(VectorSource(as.vector(tweetsTest)))
+      
+      # Create term document matrix
+      tweetsTrain.positive.matrix <- t(TermDocumentMatrix(tweetsTrain.positive.corpus,control = list(wordLengths=c(3,Inf)))); #exclude word less than 3 character
+      tweetsTrain.negative.matrix <- t(TermDocumentMatrix(tweetsTrain.negative.corpus,control = list(wordLengths=c(3,Inf))));
+      tweetsTest.matrix <- t(TermDocumentMatrix(tweetsTest.corpus,control = list(wordLengths=c(3,Inf))));
+      
+      tweetsTrain.positive.pMatrix<-probabilityMatrix(tweetsTrain.positive.matrix)
+      tweetsTrain.negative.pMatrix<-probabilityMatrix(tweetsTrain.negative.matrix)
+      
+      # Get the matrix
+      tweetsTest.matrix<-as.matrix(tweetsTest.matrix)
+      
+      # A holder for classification 
+      classified<-NULL
+      
+      for(documentNumber in 1:nrow(tweetsTest.matrix))
+      {
+        # Extract the test words
+        tweetsTest.chars<-names(tweetsTest.matrix[documentNumber,tweetsTest.matrix[documentNumber,] >= 1])
+        # Get the probabilities
+        positiveProbability <- getProbability(tweetsTest.chars,tweetsTrain.positive.pMatrix)
+        negativeProbability <- getProbability(tweetsTest.chars,tweetsTrain.negative.pMatrix)
+        # Add it to the classification list
+        classified<-c(classified,ifelse(positiveProbability>negativeProbability,"positive","negative"))
+      }
+      
+      resultRaw <- cbind(tweetsTestRaw,classified)
+      resultClean <-cbind(text=tweetsTest,classified)
+      resultnegative <- resultClean[resultClean[, "classified"] == 'negative',"text"]
+      resultpositive <- resultClean[resultClean[, "classified"] == 'positive',"text"]
+      setProgress(1)
+      result <- list(raw=resultRaw,negative=resultnegative,positive=resultpositive)
+      result
+    })
   })
   
   #ComponentAnalysis <- reactive({})

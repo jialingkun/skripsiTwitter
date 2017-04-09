@@ -10,14 +10,29 @@ shinyUI(fluidPage(
   sidebarLayout(
     sidebarPanel(
       selectInput("topic", 
-                  label = "Choose a topic",
+                  label = "Topik perguruan tinggi",
                   choices = c("machung", "gunadarma"),
                   selected = "machung"),
-      sliderInput("count",
-                  "Number of tweet retrieved:",
-                  min = 10,
+      sliderInput("tweetscount",
+                  "Jumlah tweets yang diambil",
+                  min = 0,
                   max = 500,
-                  value = 50)
+                  value = 50),
+      sliderInput("positivecomponentcount",
+                  "Jumlah faktor positif",
+                  min = 2,
+                  max = 8,
+                  value = 3),
+      sliderInput("negativecomponentcount",
+                  "Jumlah faktor negatif",
+                  min = 2,
+                  max = 8,
+                  value = 3),
+      sliderInput("sparsethreshold",
+                  "sparse threshold",
+                  min = 0.9,
+                  max = 0.99,
+                  value = 0.95)
     ),
 
     # Show a plot of the generated distribution
@@ -29,15 +44,19 @@ shinyUI(fluidPage(
           ), 
         tabPanel(
           "Faktor Positif",
-          "Faktor 1",
+          h3("Faktor 1"),
           tableOutput('PositiveF1Table'),
-          "Faktor 2"
+          h3("Faktor 2"),
+          tableOutput('PositiveF2Table'),
+          h3("Faktor 3"),
+          tableOutput('PositiveF3Table')
           ), 
         tabPanel(
           "Faktor Negatif", 
-          "Faktor 1",
-          #tableOutput('NegativeF1Table'),
-          "Faktor 2"
+          h3("Faktor 1"),
+          tableOutput('NegativeF1Table'),
+          h3("Faktor 2"),
+          tableOutput('NegativeF2Table')
           )
       )
     )

@@ -18,11 +18,13 @@ search <- function(searchterm, count)
 {
   #access tweets and create cumulative file
   
-  list <- searchTwitter(searchterm, n=count, lang="id")
+  list = searchTwitter(searchterm, n=count, lang="id")
+  filenamesplit = c(searchterm,"DataTestRaw.csv")
+  filename = str_c(filenamesplit,collapse='')
   if(length(list)>0){
-    df <- twListToDF(list)
-    df <- df[, order(names(df))]
-    df$created <- strftime(df$created, "%d/%m/%Y")
+    df = twListToDF(list)
+    df = df[, order(names(df))]
+    df$created = strftime(df$created, "%d/%m/%Y")
     
     #clean things that could cause bug
     df$text = gsub("(\r\n)+|\r+|\n+", " ", df$text) # remove line break
@@ -30,23 +32,24 @@ search <- function(searchterm, count)
     df$text = gsub("<[^ ]*>", "", df$text) # remove other format (<564+> emoticon bug)
     
     #customize data to csv
-    tweetToCsv <- cbind(created=df$created,text=df$text)
-    filenamesplit = c(searchterm,"DataTestRaw.csv")
-    filename = str_c(filenamesplit,collapse='')
+    tweetToCsv = cbind(created=df$created,text=df$text)
+    
     if (file.exists(paste(filename))==FALSE) write.csv(tweetToCsv, file=paste(filename), row.names=F)
     
     #merge last access with cumulative file and remove duplicates
-    stack <- read.csv(file=paste(filename))
-    stack <- rbind(stack, tweetToCsv)
-    stack <- subset(stack, !duplicated(stack$text))
+    stack = read.csv(file=paste(filename))
+    stack = rbind(stack, tweetToCsv)
+    stack = subset(stack, !duplicated(stack$text))
     #order by date
-    stack <- stack[rev(order(as.Date(stack$created, format="%d/%m/%Y"))),]
+    stack = stack[rev(order(as.Date(stack$created, format="%d/%m/%Y"))),]
     write.csv(stack, file=paste(filename), row.names=F)
-    return(stack)
+  }else{
+    stack = read.csv(file=paste(filename))
   }
+  return(stack)
 }
 
-clean_text = function(x)
+clean_text = function(x, topic)
 {
   #tolower function often return error on certain character, need try catch
   try.error = function(z) #To convert the text in lowercase
@@ -69,6 +72,7 @@ clean_text = function(x)
   x = gsub("[[:digit:]]", "", x) # remove numbers/Digits
   x = sapply(x, try.error) #lower case
   x = gsub("rt ", "", x) # remove Retweet tag
+  x = gsub(topic, "", x) # remove main topic term
   
   #filtering
   cStopwordID = readLines("stopword-ID.txt") #read stopword file
@@ -83,13 +87,11 @@ clean_text = function(x)
   #tokenizing
   token = str_split(x, '\\s+')
   
-  
   size = as.numeric(length(x))
   
   for(i in 1:size){
     token[[i]] = sapply(token[[i]], katadasaR)
     token[[i]] = str_c(token[[i]],collapse=' ') #untokenize
-    
   }
   
   return(token)
@@ -123,6 +125,51 @@ getProbability <- function(testChars,probabilityMatrix)
   prob<-charactersFoundSum+charactersNotFoundSum 
   prob
 }
+
+PCA = function(tweetsTest,ncomp,sparsethreshold)
+{
+  nclus = ncomp
+  tweetsTest.corpus = Corpus(VectorSource(as.vector(tweetsTest)))
+  
+  #tweetsTest.matrix = t(TermDocumentMatrix(tweetsTest.corpus,control = list(wordLengths=c(3,Inf),bounds = list(global = c(minimumfreq,Inf)))));
+  
+  tweetsTest.matrix = t(TermDocumentMatrix(tweetsTest.corpus,control = list(wordLengths=c(3,Inf))));
+  tweetsTest.matrix =removeSparseTerms(tweetsTest.matrix, sparsethreshold)
+  
+  #remove empty observer
+  ui = unique(tweetsTest.matrix$i)
+  tweetsTest.matrix = tweetsTest.matrix[ui,]
+  
+  termSums=cbind(terms=colnames(as.matrix(tweetsTest.matrix)),frequency=as.numeric(colSums(as.matrix(tweetsTest.matrix))))
+  #tdm=as.data.frame(as.matrix(tweetsTest.matrix)) #checking result
+  d = as.matrix(tweetsTest.matrix)
+  d = t(d) #transpose
+  
+  #try to do varimax by rotating scores
+  pca_existing= prcomp(d, scale=T, center=T)
+  rawLoadings     = pca_existing$rotation[,1:ncomp] %*% diag(pca_existing$sdev, ncomp, ncomp)
+  scores = scale(pca_existing$x[,1:ncomp]) %*% varimax(rawLoadings)$rotmat     #scale is for standarize
+  #print(scores[1:5,])
+  data_clustered = kmeans(scores,nclus)
+  #scores = cbind(cluster=data_clustered$cluster,scores)
+  
+  result = cbind(termSums,cluster=data_clustered$cluster)
+  rownames(result) = NULL
+  #write.csv(result, file=paste('PCAresult.csv'))
+  
+  result.factor = list()
+  
+  for(i in 1:ncomp){
+    result.factor[[i]] = as.matrix(result[result[, "cluster"] == i,c("terms","frequency"),drop=FALSE])
+    z = result.factor[[i]]
+    #print(z)
+    result.factor[[i]] = z[rev(order(as.numeric(z[,"frequency"]))),]
+  }
+  
+  return(result.factor)
+  
+}
+
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
 
@@ -134,31 +181,31 @@ shinyServer(function(input, output) {
   #  2) Its output type is a plot
   
   retrieveRawTweet <- reactive({
-      search(input$topic,input$count)
+      search(input$topic,input$tweetscount)
   })
   
   classification <- reactive({
-    withProgress(message = 'Classification :', value = 0, {
-      searchterm = input$topic
-      filenameNegative = c(searchterm,"TrainNegative.csv")
-      filenameNegative = str_c(filenameNegative,collapse='')
-      filenamePositive = c(searchterm,"TrainPositive.csv")
-      filenamePositive = str_c(filenamePositive,collapse='')
+    withProgress(message = 'Klasifikasi :', value = 0, {
+      searchterm <- input$topic
+      filenameNegative <- c(searchterm,"TrainNegative.csv")
+      filenameNegative <- str_c(filenameNegative,collapse='')
+      filenamePositive <- c(searchterm,"TrainPositive.csv")
+      filenamePositive <- str_c(filenamePositive,collapse='')
       
       # Collect data
       tweetsTrain.positive<-read.csv(filenamePositive,header=T)
-      setProgress(0.1, detail = "Cleaning data train")
-      tweetsTrain.positive$Tweet<- clean_text(tweetsTrain.positive$Tweet)
+      setProgress(0.1, detail = "Bersihkan data train")
+      tweetsTrain.positive$Tweet<- clean_text(tweetsTrain.positive$Tweet, searchterm)
       tweetsTrain.negative<-read.csv(filenameNegative,header=T)
       setProgress(0.35)
-      tweetsTrain.negative$Tweet<- clean_text(tweetsTrain.negative$Tweet)
-      setProgress(0.55, detail = "Retrieve Tweets")
+      tweetsTrain.negative$Tweet<- clean_text(tweetsTrain.negative$Tweet, searchterm)
+      setProgress(0.55, detail = "Ambil Tweet")
       tweetsTestRaw<-retrieveRawTweet()
-      setProgress(0.65, detail = "Cleaning data test")
-      tweetsTest<-clean_text(tweetsTestRaw$text)
+      setProgress(0.65, detail = "Bersihkan data test")
+      tweetsTest<-clean_text(tweetsTestRaw$text, searchterm)
 
       
-      setProgress(0.95, detail = "Computing")
+      setProgress(0.95, detail = "Komputasi")
       tweetsTrain.positive["class"]<-rep("positif",nrow(tweetsTrain.positive))
       tweetsTrain.negative["class"]<-rep("negatif",nrow(tweetsTrain.negative))
       
@@ -191,24 +238,62 @@ shinyServer(function(input, output) {
         # Add it to the classification list
         classified<-c(classified,ifelse(positiveProbability>negativeProbability,"positive","negative"))
       }
+      setProgress(1, detail = "Finalisasi")
       
       resultRaw <- cbind(tweetsTestRaw,classified)
       resultClean <-cbind(text=tweetsTest,classified)
       resultnegative <- resultClean[resultClean[, "classified"] == 'negative',"text"]
       resultpositive <- resultClean[resultClean[, "classified"] == 'positive',"text"]
-      setProgress(1)
+      
       result <- list(raw=resultRaw,negative=resultnegative,positive=resultpositive)
       result
     })
   })
   
-  #ComponentAnalysis <- reactive({})
+  ComponentAnalysis <- reactive({
+    withProgress(message = 'Analisis Faktor :', value = 0, {
+      searchterm <- input$topic
+      sparsethreshold <- input$sparsethreshold
+      ncompPositive <- input$positivecomponentcount
+      ncompNegative <- input$negativecomponentcount
+      setProgress(0.01, detail = "Menunggu hasil klasifikasi")
+      classresult <- classification()
+      tweetsTestPositive <- classresult$positive
+      tweetsTestNegative <- classresult$negative
+      setProgress(0.5, detail = "Komputasi data positif")
+      factorpositive <- PCA(tweetsTestPositive,ncompPositive,sparsethreshold)
+      setProgress(0.8, detail = "Komputasi data negatif")
+      factornegative <- PCA(tweetsTestNegative,ncompNegative,sparsethreshold)
+      setProgress(1, detail = "Finalisasi")
+      result <- list(positive=factorpositive,negative=factornegative)
+      result
+    })
+    
+  })
   
   output$ClassificationTable <- renderTable({
     classification()$raw
   })
   
   output$PositiveF1Table <- renderTable({
+    ComponentAnalysis()$positive[[1]]
+
+  },
+  include.rownames=TRUE)
+  output$PositiveF2Table <- renderTable({
+    ComponentAnalysis()$positive[[2]]
+  },
+  include.rownames=TRUE)
+  
+  output$PositiveF3Table <- renderTable({
+    ComponentAnalysis()$positive[[3]]
+  },
+  include.rownames=TRUE)
+  
+  output$NegativeF1Table <- renderTable({
+    NULL
+  })
+  output$NegativeF2Table <- renderTable({
     NULL
   })
   

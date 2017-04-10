@@ -4,7 +4,7 @@ library(shiny)
 shinyUI(fluidPage(
 
   # Application title
-  titlePanel("Hello Shiny!"),
+  titlePanel("Twitter Sentimen Analisis Perguruan Tinggi"),
 
   # Sidebar with a slider input for the number of bins
   sidebarLayout(
@@ -21,12 +21,12 @@ shinyUI(fluidPage(
       sliderInput("positivecomponentcount",
                   "Jumlah faktor positif",
                   min = 2,
-                  max = 8,
+                  max = 5,
                   value = 3),
       sliderInput("negativecomponentcount",
                   "Jumlah faktor negatif",
                   min = 2,
-                  max = 8,
+                  max = 5,
                   value = 3),
       sliderInput("sparsethreshold",
                   "sparse threshold",
@@ -48,15 +48,25 @@ shinyUI(fluidPage(
           tableOutput('PositiveF1Table'),
           h3("Faktor 2"),
           tableOutput('PositiveF2Table'),
-          h3("Faktor 3"),
-          tableOutput('PositiveF3Table')
+          h3(textOutput("PositiveF3Text")),
+          tableOutput('PositiveF3Table'),
+          h3(textOutput("PositiveF4Text")),
+          tableOutput('PositiveF4Table'),
+          h3(textOutput("PositiveF5Text")),
+          tableOutput('PositiveF5Table')
           ), 
         tabPanel(
           "Faktor Negatif", 
           h3("Faktor 1"),
           tableOutput('NegativeF1Table'),
           h3("Faktor 2"),
-          tableOutput('NegativeF2Table')
+          tableOutput('NegativeF2Table'),
+          h3(textOutput("NegativeF3Text")),
+          tableOutput('NegativeF3Table'),
+          h3(textOutput("NegativeF4Text")),
+          tableOutput('NegativeF4Table'),
+          h3(textOutput("NegativeF5Text")),
+          tableOutput('NegativeF5Table')
           )
       )
     )

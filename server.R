@@ -185,7 +185,7 @@ shinyServer(function(input, output) {
   })
   
   classification <- reactive({
-    withProgress(message = 'Klasifikasi :', value = 0, {
+    withProgress(message = 'Baca csv', value = 0, {
       searchterm <- input$topic
       filenameNegative <- c(searchterm,"TrainNegative.csv")
       filenameNegative <- str_c(filenameNegative,collapse='')
@@ -194,18 +194,18 @@ shinyServer(function(input, output) {
       
       # Collect data
       tweetsTrain.positive<-read.csv(filenamePositive,header=T)
-      setProgress(0.1, detail = "Bersihkan data train")
+      setProgress(0.1, message = "Bersihkan data train")
       tweetsTrain.positive$Tweet<- clean_text(tweetsTrain.positive$Tweet, searchterm)
       tweetsTrain.negative<-read.csv(filenameNegative,header=T)
       setProgress(0.35)
       tweetsTrain.negative$Tweet<- clean_text(tweetsTrain.negative$Tweet, searchterm)
-      setProgress(0.55, detail = "Ambil Tweet")
+      setProgress(0.55, message = "Ambil Tweet")
       tweetsTestRaw<-retrieveRawTweet()
-      setProgress(0.65, detail = "Bersihkan data test")
+      setProgress(0.65, message = "Bersihkan data test")
       tweetsTest<-clean_text(tweetsTestRaw$text, searchterm)
 
       
-      setProgress(0.95, detail = "Komputasi")
+      setProgress(0.95, message = "Komputasi")
       tweetsTrain.positive["class"]<-rep("positif",nrow(tweetsTrain.positive))
       tweetsTrain.negative["class"]<-rep("negatif",nrow(tweetsTrain.negative))
       
@@ -238,7 +238,7 @@ shinyServer(function(input, output) {
         # Add it to the classification list
         classified<-c(classified,ifelse(positiveProbability>negativeProbability,"positive","negative"))
       }
-      setProgress(1, detail = "Finalisasi")
+      setProgress(1, message = "Finalisasi")
       
       resultRaw <- cbind(tweetsTestRaw,classified)
       resultClean <-cbind(text=tweetsTest,classified)
@@ -251,7 +251,7 @@ shinyServer(function(input, output) {
   })
   
   ComponentAnalysis <- reactive({
-    withProgress(message = 'Analisis Faktor :', value = 0, {
+    withProgress(message = 'Analisis Faktor', value = 0, {
       searchterm <- input$topic
       sparsethreshold <- input$sparsethreshold
       ncompPositive <- input$positivecomponentcount
@@ -285,16 +285,63 @@ shinyServer(function(input, output) {
   },
   include.rownames=TRUE)
   
+  output$PositiveF3Text <- renderText({ 
+    if(length(ComponentAnalysis()$positive) >= 3) "Faktor 3" else NULL
+  })
   output$PositiveF3Table <- renderTable({
-    ComponentAnalysis()$positive[[3]]
+    if(length(ComponentAnalysis()$positive) >= 3) ComponentAnalysis()$positive[[3]] else NULL
   },
   include.rownames=TRUE)
   
+  output$PositiveF4Text <- renderText({ 
+    if(length(ComponentAnalysis()$positive) >= 4) "Faktor 4" else NULL
+  })
+  output$PositiveF4Table <- renderTable({
+    if(length(ComponentAnalysis()$positive) >= 4) ComponentAnalysis()$positive[[4]] else NULL
+  },
+  include.rownames=TRUE)
+  
+  output$PositiveF5Text <- renderText({ 
+    if(length(ComponentAnalysis()$positive) >= 5) "Faktor 5" else NULL
+  })
+  output$PositiveF5Table <- renderTable({
+    if(length(ComponentAnalysis()$positive) >= 5) ComponentAnalysis()$positive[[5]] else NULL
+  },
+  include.rownames=TRUE)
+  
+  
+  
   output$NegativeF1Table <- renderTable({
-    NULL
-  })
+    ComponentAnalysis()$negative[[1]]
+  },
+  include.rownames=TRUE)
   output$NegativeF2Table <- renderTable({
-    NULL
+    ComponentAnalysis()$negative[[2]]
+  },
+  include.rownames=TRUE)
+  
+  output$NegativeF3Text <- renderText({ 
+    if(length(ComponentAnalysis()$negative) >= 3) "Faktor 3" else NULL
   })
+  output$NegativeF3Table <- renderTable({
+    if(length(ComponentAnalysis()$negative) >= 3) ComponentAnalysis()$negative[[3]] else NULL
+  },
+  include.rownames=TRUE)
+  
+  output$NegativeF4Text <- renderText({ 
+    if(length(ComponentAnalysis()$negative) >= 4) "Faktor 4" else NULL
+  })
+  output$NegativeF4Table <- renderTable({
+    if(length(ComponentAnalysis()$negative) >= 4) ComponentAnalysis()$negative[[4]] else NULL
+  },
+  include.rownames=TRUE)
+  
+  output$NegativeF5Text <- renderText({ 
+    if(length(ComponentAnalysis()$negative) >= 5) "Faktor 5" else NULL
+  })
+  output$NegativeF5Table <- renderTable({
+    if(length(ComponentAnalysis()$negative) >= 5) ComponentAnalysis()$negative[[5]] else NULL
+  },
+  include.rownames=TRUE)
   
 })

@@ -253,7 +253,8 @@ shinyServer(function(input, output) {
   ComponentAnalysis <- reactive({
     withProgress(message = 'Analisis Faktor', value = 0, {
       searchterm <- input$topic
-      sparsethreshold <- input$sparsethreshold
+      sparsethresholdpositive <- input$sparsethresholdpositive
+      sparsethresholdnegative <- input$sparsethresholdnegative
       ncompPositive <- input$positivecomponentcount
       ncompNegative <- input$negativecomponentcount
       setProgress(0.01, detail = "Menunggu hasil klasifikasi")
@@ -261,9 +262,9 @@ shinyServer(function(input, output) {
       tweetsTestPositive <- classresult$positive
       tweetsTestNegative <- classresult$negative
       setProgress(0.5, detail = "Komputasi data positif")
-      factorpositive <- PCA(tweetsTestPositive,ncompPositive,sparsethreshold)
+      factorpositive <- PCA(tweetsTestPositive,ncompPositive,sparsethresholdpositive)
       setProgress(0.8, detail = "Komputasi data negatif")
-      factornegative <- PCA(tweetsTestNegative,ncompNegative,sparsethreshold)
+      factornegative <- PCA(tweetsTestNegative,ncompNegative,sparsethresholdnegative)
       setProgress(1, detail = "Finalisasi")
       result <- list(positive=factorpositive,negative=factornegative)
       result

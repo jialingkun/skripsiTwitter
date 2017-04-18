@@ -193,17 +193,16 @@ shinyServer(function(input, output) {
       filenamePositive <- str_c(filenamePositive,collapse='')
       
       # Collect data
+      setProgress(0.1, message = "Ambil Tweet")
+      tweetsTestRaw<-retrieveRawTweet()
+      setProgress(0.2, message = "Bersihkan data test")
+      tweetsTest<-clean_text(tweetsTestRaw$text, searchterm)
       tweetsTrain.positive<-read.csv(filenamePositive,header=T)
-      setProgress(0.1, message = "Bersihkan data train")
+      setProgress(0.5, message = "Bersihkan data train")
       tweetsTrain.positive$Tweet<- clean_text(tweetsTrain.positive$Tweet, searchterm)
       tweetsTrain.negative<-read.csv(filenameNegative,header=T)
-      setProgress(0.35)
+      setProgress(0.65)
       tweetsTrain.negative$Tweet<- clean_text(tweetsTrain.negative$Tweet, searchterm)
-      setProgress(0.55, message = "Ambil Tweet")
-      tweetsTestRaw<-retrieveRawTweet()
-      setProgress(0.65, message = "Bersihkan data test")
-      tweetsTest<-clean_text(tweetsTestRaw$text, searchterm)
-
       
       setProgress(0.95, message = "Komputasi")
       tweetsTrain.positive["class"]<-rep("positif",nrow(tweetsTrain.positive))
@@ -241,12 +240,13 @@ shinyServer(function(input, output) {
       setProgress(1, message = "Finalisasi")
       
       resultRaw <- cbind(tweetsTestRaw,classified)
+      resultRawnegative <- resultRaw[resultRaw[, "classified"] == 'negative',c("created","text")]
+      resultRawpositive <- resultRaw[resultRaw[, "classified"] == 'positive',c("created","text")]
       resultClean <-cbind(text=tweetsTest,classified)
       resultnegative <- resultClean[resultClean[, "classified"] == 'negative',"text"]
       resultpositive <- resultClean[resultClean[, "classified"] == 'positive',"text"]
       
-      result <- list(raw=resultRaw,negative=resultnegative,positive=resultpositive)
-      result
+      result <- list(rawnegative=resultRawnegative,rawpositive=resultRawpositive,negative=resultnegative,positive=resultpositive)
     })
   })
   
@@ -272,8 +272,12 @@ shinyServer(function(input, output) {
     
   })
   
-  output$ClassificationTable <- renderTable({
-    classification()$raw
+  output$ClassificationTablePositive <- renderTable({
+    classification()$rawpositive
+  })
+  
+  output$ClassificationTableNegative <- renderTable({
+    classification()$rawnegative
   })
   
   output$PositiveF1Table <- renderTable({

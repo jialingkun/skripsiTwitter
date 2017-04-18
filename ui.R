@@ -4,7 +4,7 @@ library(shiny)
 shinyUI(fluidPage(
 
   # Application title
-  titlePanel("Twitter Sentimen Analisis Perguruan Tinggi"),
+  titlePanel("Twitter Kampus Apps"),
 
   # Sidebar with a slider input for the number of bins
   sidebarLayout(
@@ -44,9 +44,13 @@ shinyUI(fluidPage(
     mainPanel(
       tabsetPanel(
         tabPanel(
-          "Klasifikasi", 
-          tableOutput('ClassificationTable')
-          ), 
+          "Kelas Positif", 
+          tableOutput('ClassificationTablePositive')
+          ),
+        tabPanel(
+          "Kelas Negatif", 
+          tableOutput('ClassificationTableNegative')
+          ),
         tabPanel(
           "Faktor Positif",
           h3("Faktor 1"),

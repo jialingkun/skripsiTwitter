@@ -162,8 +162,7 @@ PCA = function(tweetsTest,ncomp,sparsethreshold)
   for(i in 1:ncomp){
     result.factor[[i]] = as.matrix(result[result[, "cluster"] == i,c("terms","frequency"),drop=FALSE])
     z = result.factor[[i]]
-    #print(z)
-    result.factor[[i]] = z[rev(order(as.numeric(z[,"frequency"]))),]
+    if (as.numeric(length(result.factor[[i]][,1]))>1) result.factor[[i]] = z[rev(order(as.numeric(z[,"frequency"]))),]
   }
   
   return(result.factor)

@@ -1,21 +1,22 @@
 library(shiny)
 
-# Define UI for application that draws a histogram
 shinyUI(fluidPage(
 
   # Application title
   titlePanel("Twitter Kampus Apps"),
 
-  # Sidebar with a slider input for the number of bins
+  # Sidebar
   sidebarLayout(
     sidebarPanel(
+      #Drop down input for topic
       selectInput("topic", 
                   label = "Topik perguruan tinggi",
                   choices = c("machung", "gunadarma"),
                   selected = "machung"),
+      #Slider input
       sliderInput("tweetscount",
                   "Jumlah tweets yang diambil",
-                  min = 0,
+                  min = 1,
                   max = 500,
                   value = 50),
       sliderInput("positivecomponentcount",
@@ -40,24 +41,25 @@ shinyUI(fluidPage(
                   value = 0.95)
     ),
 
-    # Show a plot of the generated distribution
+    #main UI body
     mainPanel(
+      #Tabs
       tabsetPanel(
         tabPanel(
           "Kelas Positif", 
-          tableOutput('ClassificationTablePositive')
+          tableOutput('ClassificationTablePositive') #Classfication table
           ),
         tabPanel(
           "Kelas Negatif", 
-          tableOutput('ClassificationTableNegative')
+          tableOutput('ClassificationTableNegative') #Classfication table
           ),
         tabPanel(
           "Faktor Positif",
-          h3("Faktor 1"),
-          tableOutput('PositiveF1Table'),
+          h3("Faktor 1"), #Static Factor table label
+          tableOutput('PositiveF1Table'), #Factor table
           h3("Faktor 2"),
           tableOutput('PositiveF2Table'),
-          h3(textOutput("PositiveF3Text")),
+          h3(textOutput("PositiveF3Text")), #Dinamic Factor table label
           tableOutput('PositiveF3Table'),
           h3(textOutput("PositiveF4Text")),
           tableOutput('PositiveF4Table'),
